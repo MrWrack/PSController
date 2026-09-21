@@ -1,0 +1,57 @@
+name: Build PSController
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-check:
+    name: Source validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Show source tree
+        run: |
+          echo "PSController source validation"
+          find src -type f -print | sort
+          echo
+          echo "A real PSController.xex build will be enabled only when"
+          echo "a compatible legal Xbox 360 build toolchain is configured."
+
+      - name: Check required project files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f README.md
+          test -f src/pscontroller.cpp
+          test -f src/pscontroller.h
+          test -f src/audio/audio_manager.cpp
+          test -f src/audio/audio_hotplug.cpp
+          test -f src/usb/xbox360_usb_bridge.cpp
+          echo "Required source files are present."
+
+      - name: Reject accidentally committed proprietary SDK files
+        shell: bash
+        run: |
+          set -euo pipefail
+          if find . -type f \( -iname '*.lib' -o -iname '*.exe' -o -iname '*.dll' \) \
+             -not -path './.git/*' | grep -q .; then
+            echo "::error::Binary SDK/tool files were found. Do not commit proprietary Xbox SDK files."
+            find . -type f \( -iname '*.lib' -o -iname '*.exe' -o -iname '*.dll' \) -not -path './.git/*'
+            exit 1
+          fi
+          echo "No bundled SDK/tool binaries detected."
+
+      - name: Workflow result
+        run: |
+          echo "YAML and repository source checks passed."
+          echo "XEX compilation is intentionally not faked by this workflow."
