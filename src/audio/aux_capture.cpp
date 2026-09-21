@@ -1,4 +1,5 @@
 #include "aux_capture.h"
+#include "audio_device_probe.h"
 
 namespace aux_capture {
 
@@ -15,6 +16,20 @@ bool prepare(Session* session,
         profile->capture.max_packet_size == 0)
         return false;
 
+    audio_device_probe::Result probe = {};
+    if (!audio_device_probe::inspect(
+            device, audio_device_probe::TARGET_CONTROLLER_AUX, &probe))
+        return false;
+
+    if (!probe.microphone ||
+        probe.microphone_interface != profile->capture.interface_number ||
+        probe.microphone_alternate_setting != profile->capture.alternate_setting ||
+        probe.microphone_interval != profile->capture.interval ||
+        !sony_audio_profiles::validate_capture(
+            *profile, probe.microphone_endpoint,
+            probe.microphone_max_packet_size))
+        return false;
+
     Session s = {};
     s.device = device;
     s.profile = profile;
@@ -22,9 +37,9 @@ bool prepare(Session* session,
     s.callback_context = context;
 
     xbox360_iso::StreamConfig cfg = {};
-    cfg.endpoint_address = profile->capture.endpoint_address;
-    cfg.max_packet_size = profile->capture.max_packet_size;
-    cfg.interval = profile->capture.interval;
+    cfg.endpoint_address = probe.microphone_endpoint;
+    cfg.max_packet_size = probe.microphone_max_packet_size;
+    cfg.interval = probe.microphone_interval;
     cfg.direction = xbox360_iso::STREAM_CAPTURE;
 
     if (!xbox360_iso::open(&s.stream, device, cfg))
