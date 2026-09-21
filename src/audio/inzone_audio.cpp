@@ -3,7 +3,7 @@
 namespace inzone_audio {
 
 Model identify(const UsbIdentity& id) {
-    // Add only VID/PID pairs verified from a real H7/H9 transceiver dump.
+    // Add only VID/PID pairs verified from a real H5/H7/H9 transceiver dump.
     (void)id;
     return MODEL_UNKNOWN;
 }
@@ -37,7 +37,7 @@ bool probe_device(xbox360_usb::DeviceHandle* device,
 
 Capabilities expected_capabilities(Model model) {
     Capabilities c = {};
-    if (model == MODEL_H7 || model == MODEL_H9) {
+    if (model == MODEL_H5 || model == MODEL_H7 || model == MODEL_H9) {
         c.game_output = true;
         c.chat_output = true;
         c.microphone_input = true;
