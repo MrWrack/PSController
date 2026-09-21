@@ -15,26 +15,21 @@ audio::OutputRoute g_route = audio::OUTPUT_NONE;
 audio::MicrophoneRoute g_mic = audio::MIC_NONE;
 
 void refresh_routes() {
-    // USB headset dongles (INZONE H5/H7/H9, G733, later verified devices)
-    // suppress both controller AUX and DualSense built-in mic while present.
     if (g_usb_headset_present && g_usb_headset_audio) {
         g_route = audio::OUTPUT_USB_HEADSET;
         g_mic = audio::MIC_USB_HEADSET;
         return;
     }
-
     if (g_controller_aux_present && g_controller_aux) {
         g_route = audio::OUTPUT_CONTROLLER_AUX;
         g_mic = audio::MIC_CONTROLLER_AUX;
         return;
     }
-
     if (g_controller_connected && g_controller_is_dualsense && g_dualsense_audio) {
-        g_route = audio::OUTPUT_CONTROLLER_PARTY_ONLY;
+        g_route = audio::OUTPUT_CONTROLLER_CHAT_ONLY;
         g_mic = audio::MIC_DUALSENSE_BUILTIN;
         return;
     }
-
     g_route = audio::OUTPUT_NONE;
     g_mic = audio::MIC_NONE;
 }
@@ -61,7 +56,6 @@ bool enable_controller_aux(AuxController controller) {
     g_controller_aux = controller_aux::initialize_optional(c);
     g_controller_connected = controller != AUX_UNKNOWN;
     g_controller_is_dualsense = controller == AUX_DUALSENSE;
-    // Presence is controlled separately by real jack detection.
     refresh_routes();
     return g_controller_aux;
 }
@@ -73,11 +67,7 @@ void disable_controller_aux() {
     refresh_routes();
 }
 
-void set_usb_headset_present(bool present) {
-    g_usb_headset_present = present;
-    refresh_routes();
-}
-
+void set_usb_headset_present(bool present) { g_usb_headset_present = present; refresh_routes(); }
 void set_inzone_present(bool present) { set_usb_headset_present(present); }
 
 void set_controller_connected(bool present) {
@@ -85,18 +75,25 @@ void set_controller_connected(bool present) {
     if (!present) g_controller_is_dualsense = false;
     refresh_routes();
 }
-
-void set_controller_aux_present(bool present) {
-    g_controller_aux_present = present;
-    refresh_routes();
-}
-
-void set_controller_is_dualsense(bool dualsense) {
-    g_controller_is_dualsense = dualsense;
-    refresh_routes();
-}
+void set_controller_aux_present(bool present) { g_controller_aux_present = present; refresh_routes(); }
+void set_controller_is_dualsense(bool dualsense) { g_controller_is_dualsense = dualsense; refresh_routes(); }
 
 OutputRoute active_output() { return g_route; }
+
+OutputPolicy active_output_policy() {
+    OutputPolicy p = {};
+    if (g_route == OUTPUT_USB_HEADSET || g_route == OUTPUT_CONTROLLER_AUX) {
+        p.game_audio = true;
+        p.party_chat = true;
+        p.game_chat = true;
+    } else if (g_route == OUTPUT_CONTROLLER_CHAT_ONLY) {
+        p.game_audio = false;
+        p.party_chat = true;
+        p.game_chat = true;
+    }
+    return p;
+}
+
 MicrophoneRoute active_microphone() { return g_mic; }
 
 void shutdown() {
@@ -111,10 +108,7 @@ void shutdown() {
     refresh_routes();
 }
 
-bool is_available() {
-    return g_dualsense_audio || g_controller_aux || g_usb_headset_audio;
-}
-
+bool is_available() { return g_dualsense_audio || g_controller_aux || g_usb_headset_audio; }
 bool controller_aux_available() { return g_controller_aux; }
 bool usb_headset_available() { return g_usb_headset_audio; }
 bool inzone_available() { return g_usb_headset_audio; }
