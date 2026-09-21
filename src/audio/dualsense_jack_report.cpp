@@ -12,12 +12,10 @@ bool parse_and_route(xbox360_usb::DeviceHandle* handle,
 
     const uint8_t raw = report[USB_STATUS1_OFFSET] & STATUS1_JACK_DETECT;
 
-    // DualSense jack-detect signals are active-low in the USB input status:
-    // 0 means the corresponding headphone/microphone connection is present.
     sony_aux_detect::JackState state = {};
     state.valid = true;
-    state.headphones = (raw & STATUS1_HEADPHONE_DETECT) == 0;
-    state.microphone = (raw & STATUS1_MIC_DETECT) == 0;
+    state.headphones = (raw & STATUS1_HEADPHONE_DETECT) != 0;
+    state.microphone = (raw & STATUS1_MIC_DETECT) != 0;
 
     sony_aux_detect::on_verified_jack_state(
         handle, sony_aux_detect::CONTROLLER_DUALSENSE, state);
