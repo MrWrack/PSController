@@ -11,7 +11,8 @@ enum DeviceKind {
     DEVICE_DUALSENSE,
     DEVICE_INZONE_H5,
     DEVICE_INZONE_H7,
-    DEVICE_INZONE_H9
+    DEVICE_INZONE_H9,
+    DEVICE_LOGITECH_G733
 };
 
 struct Device {
@@ -23,17 +24,13 @@ struct Device {
 };
 
 void reset();
-
-// Called by the USB/HID add/remove bridge. Audio routing is kept separate
-// from controller input so an audio failure cannot disconnect the controller.
 void on_device_added(const Device& device);
 void on_device_removed(xbox360_usb::DeviceHandle* handle);
-
-// Headset-jack state is separate from controller presence.
-// A connected DualSense/DS4 must not be treated as AUX-in by itself.
 void set_aux_inserted(xbox360_usb::DeviceHandle* handle, bool inserted);
 
+bool wireless_usb_headset_connected();
 bool inzone_connected();
+bool logitech_g733_connected();
 bool controller_connected();
 bool controller_aux_connected();
 
