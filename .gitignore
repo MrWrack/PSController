@@ -1,0 +1,12 @@
+.vs/
+Debug/
+Release/
+*.user
+*.suo
+*.pdb
+*.obj
+*.ilk
+
+# Do not commit proprietary SDK files
+XDK/
+SDK/
