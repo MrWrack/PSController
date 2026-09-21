@@ -8,22 +8,20 @@ typedef bool (*ReadMemoryFn)(uintptr_t, void*, size_t);
 typedef bool (*InstallDetourFn)(uintptr_t, void*, void**);
 typedef void (*RemoveDetourFn)(uintptr_t);
 
-struct TargetSignature {
-    const uint8_t* bytes;
-    size_t length;
-};
+struct TargetSignature { const uint8_t* bytes; size_t length; };
+struct HookApi { ReadMemoryFn read_memory; InstallDetourFn install_detour; RemoveDetourFn remove_detour; };
 
-struct HookApi {
-    ReadMemoryFn read_memory;
-    InstallDetourFn install_detour;
-    RemoveDetourFn remove_detour;
-};
-
-// Exact signatures must come from a verified retail-17559 source/dump.
-// No built-in guessed instruction prefixes are accepted.
 struct VerifiedSignatures {
     TargetSignature hid_add;
     TargetSignature hid_remove;
+};
+
+struct OriginalHooks {
+    void* hid_add;
+    void* hid_remove;
+    void* xinput_read;
+    void* xam_caps;
+    void* xam_set_state;
 };
 
 void bind_hook_api(const HookApi& api);
@@ -36,4 +34,9 @@ bool install(const controller_runtime::ResolvedExports& exports,
              void* xam_set_state_hook);
 void remove();
 bool installed();
+
+// Native hook bodies must call through these trampolines for behavior that
+// remains owned by the original Xbox/hiddriver path.
+const OriginalHooks& originals();
+
 }
