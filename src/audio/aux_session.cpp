@@ -28,15 +28,18 @@ bool prepare(Session* session,
         return false;
 
     if (!s.probe.playback ||
+        s.probe.playback_interface != profile->playback.interface_number ||
+        s.probe.playback_alternate_setting != profile->playback.alternate_setting ||
+        s.probe.playback_interval != profile->playback.interval ||
         !sony_audio_profiles::validate_playback(
             *profile, s.probe.playback_endpoint,
-            profile->playback.max_packet_size))
+            s.probe.playback_max_packet_size))
         return false;
 
     xbox360_iso::StreamConfig cfg = {};
-    cfg.endpoint_address = profile->playback.endpoint_address;
-    cfg.max_packet_size = profile->playback.max_packet_size;
-    cfg.interval = profile->playback.interval;
+    cfg.endpoint_address = s.probe.playback_endpoint;
+    cfg.max_packet_size = s.probe.playback_max_packet_size;
+    cfg.interval = s.probe.playback_interval;
     cfg.direction = xbox360_iso::STREAM_PLAYBACK;
 
     if (!xbox360_iso::open(&s.playback, device, cfg))
@@ -81,7 +84,6 @@ bool submit_stereo_s16(Session* session,
                                    frames * 4 * sizeof(int16_t));
     }
 
-    // DS4 v2 profile is native stereo S16.
     return pcm_transfer::queue(&session->playback_engine,
                                stereo, frames * 2 * sizeof(int16_t));
 }
