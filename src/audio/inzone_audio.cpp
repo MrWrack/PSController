@@ -3,19 +3,36 @@
 namespace inzone_audio {
 
 Model identify(const UsbIdentity& id) {
-    // TODO: fill only with VID/PID pairs verified from the user's H7/H9
-    // transceiver descriptor dump. Keeping unknown IDs out prevents
-    // accidentally binding PSController to unrelated USB devices.
+    // Add only VID/PID pairs verified from a real H7/H9 transceiver dump.
     (void)id;
     return MODEL_UNKNOWN;
 }
 
-bool probe_audio_interfaces() {
-    // TODO:
-    // Enumerate the USB transceiver's interfaces and endpoints.
-    // Accept only a descriptor layout verified as an INZONE H7/H9 dongle.
-    // Discover playback/chat/microphone paths without assuming endpoint numbers.
-    return false;
+bool probe_device(xbox360_usb::DeviceHandle* device,
+                  const UsbIdentity& id,
+                  ProbeResult* result) {
+    if (!device || !result) return false;
+
+    ProbeResult r = {};
+    r.model = identify(id);
+
+    audio_device_probe::Result usb = {};
+    if (!audio_device_probe::inspect(
+            device, audio_device_probe::TARGET_INZONE, &usb)) {
+        *result = r;
+        return false;
+    }
+
+    r.audio_detected = usb.recognized_audio_layout;
+    r.playback = usb.playback;
+    r.microphone = usb.microphone;
+    r.playback_endpoint = usb.playback_endpoint;
+    r.microphone_endpoint = usb.microphone_endpoint;
+    *result = r;
+
+    // Descriptor discovery may succeed before identity is verified.
+    // Do not bind/stream as INZONE until both conditions are true.
+    return r.model != MODEL_UNKNOWN && r.audio_detected;
 }
 
 Capabilities expected_capabilities(Model model) {
@@ -32,12 +49,11 @@ Capabilities expected_capabilities(Model model) {
 }
 
 bool initialize_optional() {
-    // Failure here must never disable controller input.
-    return probe_audio_interfaces();
+    // Device-specific initialization happens when a verified dongle is attached.
+    // Keep startup non-fatal so controller support cannot be blocked by audio.
+    return false;
 }
 
-void shutdown() {
-    // Safe no-op until USB streams are implemented.
-}
+void shutdown() {}
 
 }
