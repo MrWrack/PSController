@@ -2,20 +2,22 @@
 
 namespace audio {
 
-enum AuxController {
-    AUX_UNKNOWN = 0,
-    AUX_DS4,
-    AUX_DUALSENSE
-};
+enum AuxController { AUX_UNKNOWN = 0, AUX_DS4, AUX_DUALSENSE };
 
 enum OutputRoute {
     OUTPUT_NONE = 0,
     OUTPUT_CONTROLLER_PARTY_ONLY,
     OUTPUT_CONTROLLER_AUX,
-    OUTPUT_INZONE
+    OUTPUT_USB_HEADSET
 };
 
-// Optional subsystem: failure must never make controller input unusable.
+enum MicrophoneRoute {
+    MIC_NONE = 0,
+    MIC_DUALSENSE_BUILTIN,
+    MIC_CONTROLLER_AUX,
+    MIC_USB_HEADSET
+};
+
 bool initialize_optional();
 void shutdown();
 bool is_available();
@@ -23,14 +25,19 @@ bool is_available();
 bool enable_controller_aux(AuxController controller);
 void disable_controller_aux();
 
-// INZONE H5/H7/H9 has highest priority.
-// DualSense/DS4 with AUX inserted gets full routed audio + chat.
-// With AUX removed, controller audio is Party Chat only (no game audio).
-void set_inzone_present(bool present);
+// Audio/mic routing never changes controller input state.
+// Priority: USB headset > controller AUX > DualSense built-in mic.
+// Without AUX, controller speaker is Party Chat only; game audio is not sent there.
+void set_usb_headset_present(bool present);
+void set_inzone_present(bool present); // compatibility alias
 void set_controller_connected(bool present);
 void set_controller_aux_present(bool present);
+void set_controller_is_dualsense(bool dualsense);
+
 OutputRoute active_output();
+MicrophoneRoute active_microphone();
 bool controller_aux_available();
+bool usb_headset_available();
 bool inzone_available();
 
 }
