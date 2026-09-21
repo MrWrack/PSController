@@ -23,17 +23,26 @@ Status process_attach(const Services& services) {
     services.write_line("PSController: first XEX diagnostic adapter");
     services.write_line("PSController: diagnostic-only; hooks/audio disabled");
 
-    retail17559_probe::Result result = {};
-    if (!retail17559_probe::capture(services.read_memory, 32u, &result)) {
+    retail17559_probe::Snapshot snapshot = {};
+    if (!retail17559_probe::capture(services.read_memory, 32u, &snapshot)) {
         services.write_line("PSController: HID probe failed safely");
         g_status = STATUS_PROBE_FAILED;
         return g_status;
     }
 
     char line[256] = {};
-    retail17559_probe_format::format_add(result, line, sizeof(line));
+    if (!retail17559_probe_format::format_target("HID_ADD", snapshot.hid_add, line, sizeof(line))) {
+        services.write_line("PSController: HID_ADD formatting failed safely");
+        g_status = STATUS_PROBE_FAILED;
+        return g_status;
+    }
     services.write_line(line);
-    retail17559_probe_format::format_remove(result, line, sizeof(line));
+
+    if (!retail17559_probe_format::format_target("HID_REMOVE", snapshot.hid_remove, line, sizeof(line))) {
+        services.write_line("PSController: HID_REMOVE formatting failed safely");
+        g_status = STATUS_PROBE_FAILED;
+        return g_status;
+    }
     services.write_line(line);
 
     services.write_line("PSController: diagnostic complete; no hooks installed");
