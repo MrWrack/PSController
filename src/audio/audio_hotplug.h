@@ -19,6 +19,7 @@ struct Device {
     uint16_t vid;
     uint16_t pid;
     DeviceKind kind;
+    bool aux_inserted;
 };
 
 void reset();
@@ -28,7 +29,12 @@ void reset();
 void on_device_added(const Device& device);
 void on_device_removed(xbox360_usb::DeviceHandle* handle);
 
+// Headset-jack state is separate from controller presence.
+// A connected DualSense/DS4 must not be treated as AUX-in by itself.
+void set_aux_inserted(xbox360_usb::DeviceHandle* handle, bool inserted);
+
 bool inzone_connected();
+bool controller_connected();
 bool controller_aux_connected();
 
 }
