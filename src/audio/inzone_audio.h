@@ -5,7 +5,7 @@
 
 namespace inzone_audio {
 
-enum Model { MODEL_UNKNOWN = 0, MODEL_H7, MODEL_H9 };
+enum Model { MODEL_UNKNOWN = 0, MODEL_H5, MODEL_H7, MODEL_H9 };
 
 struct UsbIdentity { uint16_t vid; uint16_t pid; };
 
