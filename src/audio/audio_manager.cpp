@@ -7,27 +7,36 @@ namespace {
 bool g_dualsense_audio = false;
 bool g_controller_aux = false;
 bool g_controller_connected = false;
+bool g_controller_is_dualsense = false;
 bool g_controller_aux_present = false;
-bool g_inzone_audio = false;
-bool g_inzone_present = false;
+bool g_usb_headset_audio = false;
+bool g_usb_headset_present = false;
 audio::OutputRoute g_route = audio::OUTPUT_NONE;
+audio::MicrophoneRoute g_mic = audio::MIC_NONE;
 
-void refresh_route() {
-    if (g_inzone_present && g_inzone_audio) {
-        g_route = audio::OUTPUT_INZONE;
+void refresh_routes() {
+    // USB headset dongles (INZONE H5/H7/H9, G733, later verified devices)
+    // suppress both controller AUX and DualSense built-in mic while present.
+    if (g_usb_headset_present && g_usb_headset_audio) {
+        g_route = audio::OUTPUT_USB_HEADSET;
+        g_mic = audio::MIC_USB_HEADSET;
         return;
     }
+
     if (g_controller_aux_present && g_controller_aux) {
         g_route = audio::OUTPUT_CONTROLLER_AUX;
+        g_mic = audio::MIC_CONTROLLER_AUX;
         return;
     }
-    // No AUX: never route game audio to the controller speaker.
-    // This route is reserved for Xbox Party Chat receive audio.
-    if (g_controller_connected && g_dualsense_audio) {
+
+    if (g_controller_connected && g_controller_is_dualsense && g_dualsense_audio) {
         g_route = audio::OUTPUT_CONTROLLER_PARTY_ONLY;
+        g_mic = audio::MIC_DUALSENSE_BUILTIN;
         return;
     }
+
     g_route = audio::OUTPUT_NONE;
+    g_mic = audio::MIC_NONE;
 }
 }
 
@@ -37,10 +46,11 @@ bool initialize_optional() {
     g_dualsense_audio = dualsense_audio::initialize();
     g_controller_aux = false;
     g_controller_connected = false;
+    g_controller_is_dualsense = false;
     g_controller_aux_present = false;
-    g_inzone_audio = inzone_audio::initialize_optional();
-    g_inzone_present = false;
-    refresh_route();
+    g_usb_headset_audio = inzone_audio::initialize_optional();
+    g_usb_headset_present = false;
+    refresh_routes();
     return is_available();
 }
 
@@ -50,8 +60,9 @@ bool enable_controller_aux(AuxController controller) {
     if (controller == AUX_DUALSENSE) c = controller_aux::CONTROLLER_DUALSENSE;
     g_controller_aux = controller_aux::initialize_optional(c);
     g_controller_connected = controller != AUX_UNKNOWN;
-    g_controller_aux_present = g_controller_aux;
-    refresh_route();
+    g_controller_is_dualsense = controller == AUX_DUALSENSE;
+    // Presence is controlled separately by real jack detection.
+    refresh_routes();
     return g_controller_aux;
 }
 
@@ -59,42 +70,53 @@ void disable_controller_aux() {
     if (g_controller_aux) controller_aux::shutdown();
     g_controller_aux = false;
     g_controller_aux_present = false;
-    refresh_route();
+    refresh_routes();
 }
 
-void set_inzone_present(bool present) {
-    g_inzone_present = present;
-    refresh_route();
+void set_usb_headset_present(bool present) {
+    g_usb_headset_present = present;
+    refresh_routes();
 }
+
+void set_inzone_present(bool present) { set_usb_headset_present(present); }
 
 void set_controller_connected(bool present) {
     g_controller_connected = present;
-    refresh_route();
+    if (!present) g_controller_is_dualsense = false;
+    refresh_routes();
 }
 
 void set_controller_aux_present(bool present) {
     g_controller_aux_present = present;
-    refresh_route();
+    refresh_routes();
+}
+
+void set_controller_is_dualsense(bool dualsense) {
+    g_controller_is_dualsense = dualsense;
+    refresh_routes();
 }
 
 OutputRoute active_output() { return g_route; }
+MicrophoneRoute active_microphone() { return g_mic; }
 
 void shutdown() {
     disable_controller_aux();
     g_controller_connected = false;
-    if (g_inzone_audio) inzone_audio::shutdown();
-    g_inzone_audio = false;
-    g_inzone_present = false;
+    g_controller_is_dualsense = false;
+    if (g_usb_headset_audio) inzone_audio::shutdown();
+    g_usb_headset_audio = false;
+    g_usb_headset_present = false;
     if (g_dualsense_audio) dualsense_audio::shutdown();
     g_dualsense_audio = false;
-    refresh_route();
+    refresh_routes();
 }
 
 bool is_available() {
-    return g_dualsense_audio || g_controller_aux || g_inzone_audio;
+    return g_dualsense_audio || g_controller_aux || g_usb_headset_audio;
 }
 
 bool controller_aux_available() { return g_controller_aux; }
-bool inzone_available() { return g_inzone_audio; }
+bool usb_headset_available() { return g_usb_headset_audio; }
+bool inzone_available() { return g_usb_headset_audio; }
 
 }
