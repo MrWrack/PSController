@@ -32,6 +32,7 @@ bool wireless_usb_headset_connected();
 bool inzone_connected();
 bool logitech_g733_connected();
 bool controller_connected();
+bool dualsense_connected();
 bool controller_aux_connected();
 
 }
