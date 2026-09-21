@@ -19,15 +19,10 @@ bool is_wireless_usb_headset(audio_hotplug::DeviceKind k) {
 }
 
 void refresh() {
-    bool controller = false;
-    bool dualsense = false;
-    bool aux = false;
-    bool wireless = false;
-
+    bool controller = false, dualsense = false, aux = false, wireless = false;
     for (int i = 0; i < kMaxTracked; ++i) {
         if (!g_used[i]) continue;
         const audio_hotplug::Device& d = g_devices[i];
-
         if (is_controller(d.kind)) {
             controller = true;
             if (d.kind == audio_hotplug::DEVICE_DUALSENSE) dualsense = true;
@@ -36,7 +31,8 @@ void refresh() {
         if (is_wireless_usb_headset(d.kind)) wireless = true;
     }
 
-    // Controller identity/input state is independent from all audio routes.
+    // Audio routing only observes controller state. It never owns, disables,
+    // removes or reinitializes controller HID input.
     audio::set_controller_connected(controller);
     audio::set_controller_is_dualsense(dualsense);
     audio::set_controller_aux_present(aux);
@@ -55,28 +51,20 @@ void on_device_added(const Device& device) {
         if (g_used[i] && g_devices[i].handle == device.handle) {
             const bool old_aux = g_devices[i].aux_inserted;
             g_devices[i] = device;
-            if (is_controller(device.kind) && !device.aux_inserted)
-                g_devices[i].aux_inserted = old_aux;
+            if (is_controller(device.kind) && !device.aux_inserted) g_devices[i].aux_inserted = old_aux;
             refresh();
             return;
         }
     }
-    for (int i = 0; i < kMaxTracked; ++i) {
-        if (!g_used[i]) {
-            g_used[i] = true;
-            g_devices[i] = device;
-            break;
-        }
+    for (int i = 0; i < kMaxTracked; ++i) if (!g_used[i]) {
+        g_used[i] = true; g_devices[i] = device; break;
     }
     refresh();
 }
 void on_device_removed(xbox360_usb::DeviceHandle* handle) {
     if (!handle) return;
-    for (int i = 0; i < kMaxTracked; ++i) {
-        if (g_used[i] && g_devices[i].handle == handle) {
-            g_used[i] = false;
-            g_devices[i] = Device();
-        }
+    for (int i = 0; i < kMaxTracked; ++i) if (g_used[i] && g_devices[i].handle == handle) {
+        g_used[i] = false; g_devices[i] = Device();
     }
     refresh();
 }
@@ -105,6 +93,11 @@ bool logitech_g733_connected() {
 bool controller_connected() {
     for (int i = 0; i < kMaxTracked; ++i)
         if (g_used[i] && is_controller(g_devices[i].kind)) return true;
+    return false;
+}
+bool dualsense_connected() {
+    for (int i = 0; i < kMaxTracked; ++i)
+        if (g_used[i] && g_devices[i].kind == DEVICE_DUALSENSE) return true;
     return false;
 }
 bool controller_aux_connected() {
